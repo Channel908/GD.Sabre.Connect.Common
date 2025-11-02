@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="../GD.Sabre.Common/GD.Sabre.Common/GD.Sabre.Common.csproj" />
+  <Project Path="GD.Sabre.Connect.Common/GD.Sabre.Connect.Common.csproj" />
+</Solution>
