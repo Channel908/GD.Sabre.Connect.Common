@@ -5,6 +5,21 @@ namespace GD.Sabre.Connect.Common.Service;
 public static class SabreAirAvailExtensions
 {
 
+    public static AirAvailResponseModel AddToModel(this AirAvailResponseModel model, OTA_AirAvailRS? response)
+    {
+        var toAdd = response.ToModel();
+
+        if (toAdd?.OriginDestinations?.Itineraries?.Count() > 0)
+        {
+            var temp = model.OriginDestinations.Itineraries.ToList();
+
+            temp.AddRange(toAdd.OriginDestinations.Itineraries);
+            model.OriginDestinations.Itineraries = temp;
+        }
+
+        return model;
+    }
+
     public static AirAvailResponseModel? ToModel(this OTA_AirAvailRS? response)
     {
         if(response?.OriginDestinationOptions == null) return null;
@@ -39,8 +54,8 @@ public static class SabreAirAvailExtensions
                 var flightSegment = new FlightSegment
                 {
                     RPH = seg.RPH.ToInt(),
-                    ArrivalDateTime = seg.ArrivalDateTime.AddYear(),
-                    DepartureDateTime = seg.DepartureDateTime.AddYear(),
+                    ArrivesAt = seg.ArrivalDateTime.AddYear(),
+                    DepartsAt = seg.DepartureDateTime.AddYear(),
                     OriginCode = seg.OriginLocation.LocationCode,
                     DestinationCode = seg.DestinationLocation.LocationCode,
                     EquipmentCode = seg.Equipment?.AirEquipType,

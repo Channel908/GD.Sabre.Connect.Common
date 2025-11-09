@@ -1,13 +1,14 @@
 
+using GD.Sabre.Common;
 using GD.Sabre.Common.Core;
 using GD.Sabre.Common.Core.Factories;
-using GD.Sabre.Common;
 using GD.Sabre.Common.Core.Models;
 using GD.Sabre.Common.Core.Models.Options;
-using GD.Sabre.Common.Service.Session;
-using System.Net;
-using GD.Sabre.Connect.Common.Service;
 using GD.Sabre.Common.Models.AirAvail;
+using GD.Sabre.Common.Service.Session;
+using GD.Sabre.Connect.Common.Service;
+using Microsoft.AspNetCore.Mvc;
+using System.Net;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -58,42 +59,46 @@ app.MapGet("/GetSession", async (ISabreSessionPool sessionPool) =>
 .WithName("GetSession");
 
 
-app.MapGet("/AirAvail", async (ISabreSessionPool sessionPool, ISabreAirAvail avail) =>
+app.MapGet("/AirAvail", async ([AsParameters] AirAvailRequestModel req, ISabreSessionPool sessionPool, ISabreAirAvail avail) =>
 {
 
     SessionItem? sessionItem = null;
-    OTA_AirAvailRS? resp = null;
 
     try
     {
-        sessionItem = await sessionPool.GetLimitedSession("CC61");
-        resp = await avail.AirAvail(sessionItem.SessionToken!);
+        var sessionResult = await sessionPool.GetLimitedSession("CC61");
 
-    }
-    catch (SabreException sx)
-    {
-        return new AirAvailResponseModel
-        {
-             Errors = [ sx.Message ]
-        };
+        if (!sessionResult.IsSuccess)
+            return SabreResult<AirAvailResponseModel>.Failure(sessionResult.Error);
+
+        sessionItem = sessionResult.Response;
+
+        var resp = await avail.AirAvail(req, sessionItem!.SessionToken!);
+
+        var model = resp.Response.ToModel();
+
+        resp = await avail.MoreAirAvail(sessionItem!.SessionToken!);
+
+         model = model.AddToModel(resp.Response);
+
+        if (!sessionResult.IsSuccess)
+            return SabreResult<AirAvailResponseModel>.Failure(sessionResult.Error);
+
+
+        return SabreResult<AirAvailResponseModel>.Success(model);
+
     }
     catch (Exception ex)
     {
-        return new AirAvailResponseModel
-        {
-            Errors = [ex.Message]
-        };
+        return SabreResult<AirAvailResponseModel>.Failure(ex);
     }
+
     finally
     {
-
         if (sessionItem != null)
             await sessionPool.ReleaseSession(sessionItem);
-        // await sessionPool.CloseSession(result.SessionPoolItem.SessionToken, "CC1");
+        //    // await sessionPool.CloseSession(result.SessionPoolItem.SessionToken, "CC1");
     }
-
-
-    return resp.ToModel();
 
 
 })
